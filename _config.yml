@@ -65,7 +65,7 @@ default_asides: [asides/recent_posts.html, asides/github.html, asides/delicious.
 
 # Github repositories
 github_user: marceloboth
-github_repo_count: 5
+github_repo_count: 2
 github_show_profile_link: true
 github_skip_forks: true
 
@@ -98,4 +98,4 @@ disqus_show_comment_count: false
 google_analytics_tracking_id:
 
 # Facebook Like
-facebook_like: false
+facebook_like: true
