@@ -3,7 +3,7 @@ layout: post
 title: "CRUD com Rails - Criando um cadastro usando Rspec"
 date: 2014-06-28 22:22:49 -0300
 comments: true
-categories:
+categories: [Iniciante, Ruby on Rails]
 ---
 
 O acrônimo CRUD (Create, Read, Update e Delete) é algo que todo iniciante em linguagens de programação ou frameworks necessita saber, pois significa nada menos que as operações básicas para a criação/manutenção de cadastros.
@@ -106,7 +106,7 @@ Se rodarmos novamente os testes, nossa ação é encontrada, porém o template e
       Missing template products/new, application/new with ….
 {% endcodeblock %}
 
-Devemos criar o nosso template na camada de views do projeto. Então na pasta app/views, crie um pasta chamada products e nela um arquivo com o nome new.html.erb. Feito isso rode o teste mais uma vez. Agora temos um problema diferente de todos até agora. O Capybara na tentativa de preencher os campos do formulário (que não existe) acaba gerando um novo erro:
+Devemos criar o nosso template na camada de views do projeto. Então na pasta app/views, crie uma pasta chamada products e nela um arquivo com o nome new.html.erb. Feito isso rode o teste mais uma vez. Agora temos um problema diferente de todos até agora. O Capybara na tentativa de preencher os campos do formulário (que não existe) acaba gerando um novo erro:
 
 {% codeblock Não encontrou o elemento Nome lang:bash %}
   Failure/Error: fill_in 'Nome', with: 'Produto 1'
@@ -125,7 +125,7 @@ end
 A constante Product  é o nosso model, que deve ser criado em app/models/product.rb. Mas antes de sair criando o arquivo, vamos acelerar as coisas usando um gerador de código do Rails.
 
 {% codeblock Comando para gerar tudo relacionado ao model lang:bash %}
-rails g model project name:string description:string
+rails g model productect name:string description:string
 {% endcodeblock %}
 
 Esse generator (gerador) nos poupa um tempo criando uma série de arquivos, como o arquivo de migração do banco de dados com os campos necessários, nosso model extendendo de ActiveRecord que contém um infinidade de funcionalidades para trabalhar com nossos dados e arquivos de testes unitários.
@@ -188,7 +188,7 @@ AbstractController::ActionNotFound:
   The action 'create' could not be found for ProductsController
 {% endcodeblock %}
 
-Então para resolver isso devemos criar o nosso método create:
+Então para resolver isso devemos criar o nosso método create dentro do ProductContoller:
 
 {% codeblock Definindo a action create lang:ruby %}
 def create
@@ -207,9 +207,10 @@ end
 Também defina um  método privado para permitir que nossos parametros sejam lidos, sem serem bloqueados pelo mecanismo de Strong Parameters do Rails 4:
 
 {% codeblock Adicionando os campos permitidos lang:ruby %}
-def project_params
-  params.require(:project).permit(:name, :description)
-end
+private
+  def product_params
+    params.require(:product).permit(:name, :description)
+  end
 {% endcodeblock %}
 
 Rode seu teste e ele ira dizer que não encontrou a action show. Isso quer dizer que o nosso cadastro está sendo salvo, porém não temos uma ação para fazer a exibição de cadastro. Adicione a ação show ao seu ProductController:
