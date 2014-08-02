@@ -221,11 +221,252 @@ def show
 end
 {% endcodeblock %}
 
-Se rodarmos os testes vamos ter um erro por que o template correspondente a action, não pode ser encontrada, crie um o seguinte arquivo app/views/products/show.html.erb, e adicione o código abaixo:
+Se rodarmos os testes vamos ter um erro por que o template correspondente a action, não pode ser encontrada, crie um o seguinte arquivo ``app/views/products/show.html.erb``, e adicione o código abaixo:
 
 {% codeblock app/views/products/show.html.erb lang:ruby %}
 <h2><%= @product.name %></h2>
 <p><%= @product.description %></p>
 {% endcodeblock %}
 
-Rodandos os testes, nossa feature vai passar. Se quiser testar manualmente, inicie o servidor com o comando rails s e realize um cadastro.
+Rodandos os testes, nossa feature vai passar. Se quiser testar manualmente, inicie o servidor com o comando ``rails s`` e realize um cadastro.
+
+## Adicionando validações aos nossos campos
+
+Como o nosso cadastro criado e funcionando, devemos adicionar algumas validações
+para os nossos campos. Ao campo ``nome`` vamos verificar se ele foi informado,
+se atende o tamanho minímo de 3 caracteres e o máximo de 50 e também, o nome deve
+ser único. Já para o campo ``descrição`` verificáremos se foi informado e se possue
+pelo menos 15 carácteres de texto. Nessa etapa, vamos usar testes unitários e testes
+de integração. Os testes unitários vão garantir que as validações estão sendo exigidas
+e o teste integrado deverá validar a operação de cadastro completo.
+
+### Testando unitáriamente nosso model
+
+Vamos iniciar testando no nosso model ``Product`` se algum valor a propriedade name foi
+informado, assim impediremos que o nosso campo tenha um valor em branco. Vamos usar
+a validação de tamanho para impedir o não preenchimento do campo. Adicione o seguinte código de ao arquivo:
+
+{% codeblock spec/models/product_spec.rb lang:ruby %}
+  require 'rails_helper'
+
+  describe Product do
+    before do
+      @product = Product.new(name: "Cadastro Exemplo",
+        description: "Descrição do cadastro Exemplo")
+    end
+
+    describe "quando o nome não foi informado" do
+      before { @product.name = ""}
+      it { should_not be_valid }
+    end
+
+    describe "quando o nome é muito curto" do
+      before { @product.name = "na"}
+      it { should_not be_valid }
+    end
+
+    describe "quando o nome é muito longo" do
+      before { @product.name = "n" * 50}
+      it { should_not be_valid }
+    end
+  end
+{% endcodeblock %}
+
+Rode o comando ``rspec spec/models/product_spec.rb`` e o nosso teste deverá falhar,
+pois estamos esperando que algo errado aconteça com o uso dos métodos ``should_not be_valid``,
+mas como não definimos as validações no nosso model, nada de errado ocorre e o nosso teste
+falha. Adicione o código abaixo e rode o comando em seguida, nosso testes deve passar:
+
+{% codeblock app/models/product.rb lang:ruby %}
+  class Product < ActiveRecord::Base
+    validates_length_of :name, minimum: 5, maximum: 50, allow_blank: false
+  end
+{% endcodeblock %}
+
+A validação do nome está quase completa, para finalizar adicione ao teste á baixo do último
+bloco describe:
+
+{% codeblock spec/models/product_spec.rb lang:ruby %}
+  describe "quando o nome de produto já está sendo usado" do
+    before do
+      product_with_same_name = @product.dup
+      product_with_same_name.name = @product.name
+      product_with_same_name.save
+    end
+
+    it { should_not be_valid }
+  end
+{% endcodeblock %}
+
+Usamos o método dup quando queremos duplicar um módelo. Aqui queremos que o nome que já
+exista, não seja duplicado, e é isso que o teste nos assegura. Ao model adicione:
+
+{% codeblock app/models/product.rb lang:ruby %}
+  validates_uniqueness_of :name
+{% endcodeblock %}
+
+E rode o teste novamente. Tudo verde, o campo nome está validado, agora vamos
+validar o campo ``description``. Ao teste insira abaixo do ultimo bloco de describe
+o seguinte código:
+
+{% codeblock spec/models/product_spec.rb lang:ruby %}
+  describe "quando a descrição não foi informada " do
+    before { @product.description = "" }
+    it { should_not be_valid }
+  end
+
+  describe "quando a descrição é muito curta" do
+    before { @product.name = "n" * 15}
+    it { should_not be_valid }
+  end
+
+  describe "quando a descrição é muito longa" do
+    before { @product.name = "n" * 255}
+    it { should_not be_valid }
+  end
+{% endcodeblock %}
+
+E ao nosso modelo insira as validações:
+
+{% codeblock app/models/product.rb lang:ruby %}
+  validates_length_of :description, minimum: 15, maximum: 255, allow_blank: false
+{% endcodeblock %}
+
+Mas que beleza! Nosso modelo está validando nossos dados e temos a garantia disso
+com os testes unitários, hora de testar integrado e ajustar nossas mensagens.
+
+## Testando de maneira integrada
+Antes de continuar a implementação, vamos refatorar a nossa spec feature ``spec/features/products/creating_products_spec.rb``. Vamos adicionar um bloco ``before``,
+e nele vamos colocar o que estará repetindo nos outros cenários, nossa feature deve ser
+semelhante a isso:
+
+{% codeblock spec/features/products/creating_products_spec.rb lang:ruby %}
+  require 'rails_helper'
+
+  feature 'Criando Produtos' do
+    before do
+      visit '/'
+      click_link 'Novo Produto'
+    end
+
+    scenario "posso criar um produto" do
+      fill_in 'Nome', with: 'Produto 1'
+      fill_in 'Descrição', with: 'Produto 1 (um)'
+      click_button 'Criar produto'
+
+      expect(page).to have_content('Produto foi criado.')
+    end
+  end
+{% endcodeblock %}
+
+Rode a spec com o comando ``rspec spec/features/products/creating_products_spec.rb``, seu primeiro
+cenário deverá falhar. Agora estamos validando nossos campos, e a nossa descrição não está
+no tamanho correto, corrija, colocando uma descrição com pelo menos 15 caracteres, rode o teste
+novamente e tudo estará correto.
+
+Vamos agora focar nos cenários de teste negativo. Primeiro para valores do campo nome.
+Crie um novo cenário abaixo do último criado, como o seguinte código:
+
+{% codeblock insira em spec/features/products/creating_products_spec.rb lang:ruby %}
+  scenario "com nome inválido não posso criar um produto" do
+    fill_in 'Nome', with: ''
+    fill_in 'Descrição', with: 'Produto com uma bela descrição de teste'
+    click_button 'Criar produto'
+
+    expect(page).to have_content('Nome é muito curto (mínimo: 5 caracteres)')
+  end
+{% endcodeblock %}
+
+Se rodar o teste, irá falhar, pois essa mensagem não está sendo exibida. Vamos criar
+um arquivo, na pasta shared de nossas views, com o nome de _errors.html.erb
+(app/views/shared/_errors.html.erb). Será um ``partial``, que irá exibir todos os
+erros de validação.
+
+{% codeblock insira em app/views/shared/_errors.html.erb lang:ruby %}
+  <% if object.errors.any? %>
+  <div id="error_explanation">
+    <div class="alert alert-error">
+      O formulário contém <%= pluralize(object.errors.count, "erro") %>.
+    </div>
+    <ul>
+      <% object.errors.full_messages.each do |msg| %>
+      <li>* <%= msg %></li>
+      <% end %>
+    </ul>
+  </div>
+  <% end %>
+{% endcodeblock %}
+
+Também deve-se incluir esse arquivo no formulário de cadastro:
+
+{% codeblock altere em app/views/products/new.html.erb lang:ruby %}
+  <h2>New Product</h2>
+
+  <%= form_for(@product) do |f| %>
+    <%= render 'shared/errors', object: f.object %>
+    <p>
+      <%= f.label :name, "Nome" %><br />
+      <%= f.text_field :name %>
+    </p>
+    <p>
+      <%= f.label :description, "Descrição" %><br />
+      <%= f.text_field :description %>
+    </p>
+    <p>
+      <%= f.submit "Criar produto" %>
+    </p>
+  <% end %>
+{% endcodeblock %}
+
+Podemos rodar nosso teste novamente, e teremos ainda algum erro, mas estamos quase.
+Precisamos ajustar para que nossos atributos (name e description) sejam reconhecidos
+como nome e descrição. Basta mudar no nosso arquivo de tradução  em ``config/locales/pt-BR/pt-BR.yml``
+
+{% codeblock adicione em config/locales/pt-BR/pt-BR.yml lang:yaml %}
+  activerecord:
+    models:
+      product: Produto
+    attributes:
+      product:
+        name: Nome
+        description: Descrição
+{% endcodeblock %}
+
+Dessa maneira podemos traduzir tudo que o active record gera automáticamente, é uma maneira
+muito flexível de se traduzir o nosso sistema. Rode novamente os testes e dessa vez, nossa
+spec passou. Hora de refatorar. Agora que colocamos a tradução dos campos do active record,
+não precisamos mais a tradução que está fixa nos campos do formulário de cadastro. Remova
+a tradução:
+
+{% codeblock remova a tradução em app/views/products/new.html.erb lang:ruby %}
+  <h2>New Product</h2>
+
+  <%= form_for(@product) do |f| %>
+    <%= render 'shared/errors', object: f.object %>
+    <p>
+      <%= f.label :name %><br />
+      <%= f.text_field :name %>
+    </p>
+    <p>
+      <%= f.label :description %><br />
+      <%= f.text_field :description %>
+    </p>
+    <p>
+      <%= f.submit "Criar produto" %>
+    </p>
+  <% end %>
+{% endcodeblock %}
+
+Complete nossa spec com teste para descrição:
+
+{% codeblock insira em spec/features/products/creating_products_spec.rb lang:ruby %}
+  scenario "com descrição inválida não posso criar um produto" do
+    fill_in 'Nome', with: 'Meu produto'
+    fill_in 'Descrição', with: ''
+    click_button 'Criar produto'
+
+    expect(page).to have_content('Descrição é muito curto (mínimo: 15 caracteres)')
+  end
+{% endcodeblock %}
+
+Poderíamos colocar mais testes, mas não é esse o intuíto do post (Fica de incentivo para você).
