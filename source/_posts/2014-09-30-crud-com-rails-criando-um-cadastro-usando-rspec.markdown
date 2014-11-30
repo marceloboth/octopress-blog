@@ -54,6 +54,12 @@ O teste falhará pois não temos o link “Novo Produto” na rota “/”, que 
   <li><%= link_to 'Novo Produto', new_product_path %></li>
 {% endcodeblock %}
 
+Edite a página de layout para possuir esse link:
+
+{% codeblock app/views/layouts/application.html.erb lang:erb %}
+  <%= render 'layouts/navigation' %>
+{% endcodeblock %}
+
 Rode os testes novamente e ocorrera um erro pois não definimos uma rota para os nossos produtos:
 
 {% codeblock Erro no bash lang:bash %}
@@ -128,7 +134,7 @@ end
 A constante Product  é o nosso model, que deve ser criado em app/models/product.rb. Mas antes de sair criando o arquivo, vamos acelerar as coisas usando um gerador de código do Rails.
 
 {% codeblock Comando para gerar tudo relacionado ao model lang:bash %}
-rails g model productect name:string description:string
+rails g model Pproduct name:string description:string
 {% endcodeblock %}
 
 Esse generator (gerador) nos poupa um tempo criando uma série de arquivos, como o arquivo de migração do banco de dados com os campos necessários, nosso model extendendo de ActiveRecord que contém um infinidade de funcionalidades para trabalhar com nossos dados e arquivos de testes unitários.
@@ -214,6 +220,31 @@ private
   def product_params
     params.require(:product).permit(:name, :description)
   end
+{% endcodeblock %}
+
+Como vamos usar flash messages do Rails, é necessário em nosso application.html.erb definir um local para
+fazer a exibição das mensagens. Crie um diretório denominado ``shared`` dentro da pasta views. Nessa nova pasta
+crie o arquivo ``_messages.html.erb``. Adicione o seguinte conteúdo:
+
+{% codeblock app/views/shared/_messages.html.erb lang:erb %}
+  <% flash.each do |name, msg| %>
+    <% if msg.is_a?(String) %>
+      <div class="alert alert-<%= name.to_s == 'notice' ? 'success' : 'danger' %>">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <%= content_tag :div, msg, :id => "flash_#{name}" %>
+      </div>
+    <% end %>
+  <% end %>
+{% endcodeblock %}
+
+Com o partial criado, adicione a chamada de renderização no arquivo de layout, logo acima da
+instrução ``yield``:
+
+{% codeblock app/views/layouts/application.html.erb lang:erb %}
+  <div class="container">
+    <%= render 'shared/messages' %>
+    <%= yield %>
+  </div>
 {% endcodeblock %}
 
 Rode seu teste e ele ira dizer que não encontrou a action show. Isso quer dizer que o nosso cadastro está sendo salvo, porém não temos uma ação para fazer a exibição de cadastro. Adicione a ação show ao seu ProductController:
@@ -435,6 +466,26 @@ como nome e descrição. Basta mudar no nosso arquivo de tradução  em ``config
         description: Descrição
 {% endcodeblock %}
 
+E mude a configuração padrão, para reconhecer a tradução bem como torna-la default
+para o nosso sistema:
+
+{% codeblock ajuste a tradução em config/application.rb lang:ruby %}
+  module CrudRspec
+    class Application < Rails::Application
+      config.time_zone = 'Brasilia'
+      config.i18n.default_locale = :'pt-BR'
+      config.i18n.load_path += Dir["#{Rails.root}/config/locales/**/*.{rb,yml}"]
+      config.encoding = 'utf-8'
+      I18n.enforce_available_locales = false
+    end
+  end
+{% endcodeblock %}
+
+E também baixe a tradução das mensagens. Salve no diretorio ``config/locales/pt-BR`` com
+o nome de rails.pt-BR.yml. Baixe desse repositório:
+
+https://raw.githubusercontent.com/svenfuchs/rails-i18n/master/rails/locale/pt-BR.yml
+
 Dessa maneira podemos traduzir tudo que o active record gera automáticamente, é uma maneira
 muito flexível de se traduzir o nosso sistema. Rode novamente os testes e dessa vez, nossa
 spec passou. Hora de refatorar. Agora que colocamos a tradução dos campos do active record,
@@ -473,3 +524,6 @@ Complete nossa spec com teste para descrição:
 {% endcodeblock %}
 
 Poderíamos colocar mais testes, mas não é esse o intuíto do post (Fica de incentivo para você).
+
+O código fonte pode ser baixado aqui: https://github.com/marceloboth/crud-rspec. Baixando o código
+faça checkout para o branch criando_cadastro: ``git chechout criando_cadastro``.
