@@ -57,7 +57,7 @@ O teste falhará pois não temos o link “Novo Produto” na rota “/”, que 
 Edite a página de layout para possuir esse link:
 
 {% codeblock app/views/layouts/application.html.erb lang:erb %}
-  <%= render 'layouts/navigation' %>
+  <%= render "layouts/navigation" %>
 {% endcodeblock %}
 
 Rode os testes novamente e ocorrera um erro pois não definimos uma rota para os nossos produtos:
@@ -216,10 +216,10 @@ end
 Também defina um  método privado para permitir que nossos parametros sejam lidos, sem serem bloqueados pelo mecanismo de Strong Parameters do Rails 4:
 
 {% codeblock Adicionando os campos permitidos lang:ruby %}
-private
-  def product_params
-    params.require(:product).permit(:name, :description)
-  end
+  private
+    def product_params
+      params.require(:product).permit(:name, :description)
+    end
 {% endcodeblock %}
 
 Como vamos usar flash messages do Rails, é necessário em nosso application.html.erb definir um local para
