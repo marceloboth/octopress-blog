@@ -12,3 +12,5 @@ About me
 https://github.com/marceloboth
 
 https://twitter.com/marceloboth
+
+marcelo.both@gmail.com
